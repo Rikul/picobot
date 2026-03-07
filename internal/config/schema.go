@@ -46,10 +46,19 @@ type WhatsAppConfig struct {
 }
 
 type ProvidersConfig struct {
-	OpenAI *ProviderConfig `json:"openai,omitempty"`
+	OpenAI        *ProviderConfig      `json:"openai,omitempty"`
+	Transcription *TranscriptionConfig `json:"transcription,omitempty"`
 }
 
 type ProviderConfig struct {
 	APIKey  string `json:"apiKey"`
 	APIBase string `json:"apiBase"`
+}
+
+// TranscriptionConfig configures a Whisper-compatible speech-to-text endpoint
+// used to transcribe Telegram voice messages before passing them to the agent.
+type TranscriptionConfig struct {
+	APIBase string `json:"apiBase"`
+	APIKey  string `json:"apiKey"`
+	Model   string `json:"model"` // defaults to "whisper-1" if empty
 }

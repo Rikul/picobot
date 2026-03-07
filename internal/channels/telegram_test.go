@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/local/picobot/internal/chat"
+	"github.com/local/picobot/internal/config"
 )
 
 func TestStartTelegramWithBase(t *testing.T) {
@@ -47,7 +48,7 @@ func TestStartTelegramWithBase(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if err := StartTelegramWithBase(ctx, b, token, base, nil); err != nil {
+	if err := StartTelegramWithBase(ctx, b, token, base, nil, nil); err != nil {
 		t.Fatalf("StartTelegramWithBase failed: %v", err)
 	}
 	// Start the hub router so outbound messages sent to b.Out are dispatched
@@ -83,5 +84,94 @@ func TestStartTelegramWithBase(t *testing.T) {
 	// cancel and allow goroutines to stop
 	cancel()
 	// give a small grace period
+	time.Sleep(50 * time.Millisecond)
+}
+
+func TestStartTelegramVoiceTranscription(t *testing.T) {
+	token := "testtoken"
+	const transcribedText = "this is the transcribed voice message"
+
+	// Track which endpoints were called.
+	var getFileCalled, downloadCalled, transcribeCalled bool
+
+	// Fake Telegram server handles getUpdates (returns a voice message), getFile, and file download.
+	telegramServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		w.Header().Set("Content-Type", "application/json")
+		switch {
+		case strings.HasSuffix(path, "/getUpdates"):
+			if !getFileCalled {
+				// Return a single voice update.
+				w.Write([]byte(`{"ok":true,"result":[{"update_id":10,"message":{"message_id":2,"from":{"id":42},"chat":{"id":99,"type":"private"},"voice":{"file_id":"fileid123","duration":3}}}]}`))
+				return
+			}
+			w.Write([]byte(`{"ok":true,"result":[]}`))
+
+		case strings.HasSuffix(path, "/getFile"):
+			getFileCalled = true
+			w.Write([]byte(`{"ok":true,"result":{"file_path":"voice/file.ogg"}}`))
+
+		case strings.Contains(path, "/file/bot") && strings.HasSuffix(path, "/voice/file.ogg"):
+			downloadCalled = true
+			w.Header().Set("Content-Type", "audio/ogg")
+			w.Write([]byte("fake-ogg-audio-data"))
+
+		default:
+			w.WriteHeader(404)
+		}
+	}))
+	defer telegramServer.Close()
+
+	// Fake transcription server.
+	transcriptionServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/audio/transcriptions") {
+			transcribeCalled = true
+			w.Header().Set("Content-Type", "application/json")
+			w.Write([]byte(`{"text":"` + transcribedText + `"}`))
+			return
+		}
+		w.WriteHeader(404)
+	}))
+	defer transcriptionServer.Close()
+
+	base := telegramServer.URL + "/bot" + token
+	b := chat.NewHub(10)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	transcriptionCfg := &config.TranscriptionConfig{
+		APIBase: transcriptionServer.URL,
+		APIKey:  "test-key",
+		Model:   "whisper-1",
+	}
+
+	if err := StartTelegramWithBase(ctx, b, token, base, nil, transcriptionCfg); err != nil {
+		t.Fatalf("StartTelegramWithBase failed: %v", err)
+	}
+	b.StartRouter(ctx)
+
+	select {
+	case msg := <-b.In:
+		if msg.Content != transcribedText {
+			t.Fatalf("expected transcribed content %q, got %q", transcribedText, msg.Content)
+		}
+		if msg.ChatID != "99" {
+			t.Fatalf("unexpected chat id: %s", msg.ChatID)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("timeout waiting for transcribed voice message")
+	}
+
+	if !getFileCalled {
+		t.Error("expected getFile to be called")
+	}
+	if !downloadCalled {
+		t.Error("expected voice file download to be called")
+	}
+	if !transcribeCalled {
+		t.Error("expected transcription endpoint to be called")
+	}
+
+	cancel()
 	time.Sleep(50 * time.Millisecond)
 }
