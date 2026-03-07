@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -174,4 +176,46 @@ func TestStartTelegramVoiceTranscription(t *testing.T) {
 
 	cancel()
 	time.Sleep(50 * time.Millisecond)
+}
+
+func TestTranscribeViaCLI(t *testing.T) {
+	const expected = "hello from whisper"
+
+	// Build a fake whisper script: reads --output_dir and writes <basename>.txt there.
+	scriptDir := t.TempDir()
+	scriptPath := filepath.Join(scriptDir, "fake-whisper")
+	script := `#!/bin/sh
+# Parse arguments to find the audio file and --output_dir value.
+audio=""
+outdir=""
+prev=""
+for arg; do
+  case "$prev" in
+    --output_dir) outdir="$arg" ;;
+  esac
+  case "$arg" in
+    --*) ;;
+    *) if [ -z "$audio" ]; then audio="$arg"; fi ;;
+  esac
+  prev="$arg"
+done
+base=$(basename "$audio")
+base="${base%.*}"
+printf 'hello from whisper' > "$outdir/$base.txt"
+`
+	if err := os.WriteFile(scriptPath, []byte(script), 0755); err != nil {
+		t.Fatalf("write fake whisper script: %v", err)
+	}
+
+	ctx := context.Background()
+	got, err := transcribeViaCLI(ctx, []byte("fake-audio"), "voice.ogg", &config.TranscriptionConfig{
+		Command: scriptPath,
+		Model:   "tiny",
+	})
+	if err != nil {
+		t.Fatalf("transcribeViaCLI: %v", err)
+	}
+	if got != expected {
+		t.Fatalf("expected %q, got %q", expected, got)
+	}
 }

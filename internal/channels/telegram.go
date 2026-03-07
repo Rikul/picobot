@@ -10,6 +10,9 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -191,10 +194,10 @@ func StartTelegramWithBase(ctx context.Context, hub *chat.Hub, token, base strin
 	return nil
 }
 
-// transcribeVoice downloads the Telegram file identified by fileID and transcribes
-// it using the configured Whisper-compatible API endpoint.
+// transcribeVoice downloads a Telegram voice/audio file and transcribes it.
+// CLI mode is used when cfg.Command is set; otherwise HTTP mode is used.
 func transcribeVoice(ctx context.Context, client *http.Client, telegramBase, fileBase, fileID string, cfg *config.TranscriptionConfig) (string, error) {
-	// Step 1: resolve the file path via Telegram's getFile endpoint.
+	// Step 1: resolve the Telegram file path.
 	resp, err := client.PostForm(telegramBase+"/getFile", url.Values{"file_id": {fileID}})
 	if err != nil {
 		return "", fmt.Errorf("getFile request: %w", err)
@@ -225,7 +228,75 @@ func transcribeVoice(ctx context.Context, client *http.Client, telegramBase, fil
 	audioData, _ := io.ReadAll(dlResp.Body)
 	dlResp.Body.Close()
 
-	// Step 3: build multipart form and POST to the transcription API.
+	// Derive a filename from the Telegram path (preserves extension like .ogg, .mp3).
+	filename := "voice.ogg"
+	if parts := strings.Split(gf.Result.FilePath, "/"); len(parts) > 0 {
+		filename = parts[len(parts)-1]
+	}
+
+	// Step 3: transcribe.
+	if cfg.Command != "" {
+		return transcribeViaCLI(ctx, audioData, filename, cfg)
+	}
+	return transcribeViaHTTP(ctx, audioData, filename, cfg)
+}
+
+// transcribeViaCLI writes the audio to a temp file, invokes the whisper CLI,
+// and reads the resulting .txt output file.
+//
+// Compatible with `openai-whisper` (pip install openai-whisper):
+//
+//	whisper <file> --model tiny --output_format txt --output_dir <dir>
+func transcribeViaCLI(ctx context.Context, audioData []byte, filename string, cfg *config.TranscriptionConfig) (string, error) {
+	// Write audio to a temp file.
+	tmpAudio, err := os.CreateTemp("", "tg-voice-*-"+filename)
+	if err != nil {
+		return "", fmt.Errorf("create temp audio file: %w", err)
+	}
+	defer os.Remove(tmpAudio.Name())
+	if _, err := tmpAudio.Write(audioData); err != nil {
+		tmpAudio.Close()
+		return "", fmt.Errorf("write temp audio: %w", err)
+	}
+	tmpAudio.Close()
+
+	// Temp dir for whisper output.
+	outDir, err := os.MkdirTemp("", "whisper-out-*")
+	if err != nil {
+		return "", fmt.Errorf("create whisper output dir: %w", err)
+	}
+	defer os.RemoveAll(outDir)
+
+	model := cfg.Model
+	if model == "" {
+		model = "tiny"
+	}
+
+	// Build command. Support "python3 -m whisper" style multi-word commands.
+	parts := strings.Fields(cfg.Command)
+	args := append(parts[1:], tmpAudio.Name(),
+		"--model", model,
+		"--output_format", "txt",
+		"--output_dir", outDir,
+	)
+	cmd := exec.CommandContext(ctx, parts[0], args...)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("whisper CLI: %w\n%s", err, out)
+	}
+
+	// Whisper writes <basename>.txt in outDir.
+	base := strings.TrimSuffix(filepath.Base(tmpAudio.Name()), filepath.Ext(tmpAudio.Name()))
+	txt, err := os.ReadFile(filepath.Join(outDir, base+".txt"))
+	if err != nil {
+		return "", fmt.Errorf("read whisper output: %w", err)
+	}
+	return strings.TrimSpace(string(txt)), nil
+}
+
+// transcribeViaHTTP sends the audio to a Whisper-compatible REST endpoint
+// (e.g. OpenAI /v1/audio/transcriptions or a self-hosted server).
+func transcribeViaHTTP(ctx context.Context, audioData []byte, filename string, cfg *config.TranscriptionConfig) (string, error) {
 	var buf bytes.Buffer
 	mw := multipart.NewWriter(&buf)
 
@@ -235,12 +306,6 @@ func transcribeVoice(ctx context.Context, client *http.Client, telegramBase, fil
 	}
 	if err := mw.WriteField("model", model); err != nil {
 		return "", fmt.Errorf("write model field: %w", err)
-	}
-
-	// Use the filename from the Telegram file path to preserve the extension.
-	filename := "voice.ogg"
-	if parts := strings.Split(gf.Result.FilePath, "/"); len(parts) > 0 {
-		filename = parts[len(parts)-1]
 	}
 	fw, err := mw.CreateFormFile("file", filename)
 	if err != nil {
