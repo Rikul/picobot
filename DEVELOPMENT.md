@@ -75,6 +75,39 @@ go test ./internal/agent/
 go test -v ./...
 ```
 
+### Run go vet
+
+`go vet` catches common mistakes like unreachable code, misused format strings, and similar issues:
+
+```sh
+go vet ./...
+```
+
+### Run golangci-lint
+
+The project uses [golangci-lint](https://golangci-lint.run/) to enforce code quality. Install it first if you haven't already:
+
+```sh
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+```
+
+> If you get `zsh: command not found: golangci-lint` after installing, add the Go bin directory to your PATH:
+> ```sh
+> export PATH="$PATH:$(go env GOPATH)/bin"
+> # Make it permanent — add the line above to ~/.zshrc or ~/.bashrc
+> ```
+
+```sh
+# Lint all packages
+golangci-lint run
+
+# Lint a specific package
+golangci-lint run ./internal/agent/...
+
+# Auto-fix some issues
+golangci-lint run --fix
+```
+
 ## Versioning
 
 The version string is defined in `cmd/picobot/main.go`:

@@ -46,7 +46,7 @@ func TestAgentExecutesWebToolCall(t *testing.T) {
 	// create a real server to fetch
 	h := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
-		w.Write([]byte("hello web"))
+		_, _ = w.Write([]byte("hello web"))
 	}))
 	defer h.Close()
 

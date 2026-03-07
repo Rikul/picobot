@@ -152,7 +152,7 @@ func (p *OpenAIProvider) Chat(ctx context.Context, messages []Message, tools []T
 	if err != nil {
 		return LLMResponse{}, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		// attempt to read response body for more details (do not expose API key)

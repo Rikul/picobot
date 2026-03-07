@@ -18,7 +18,7 @@ func LoadConfig() (Config, error) {
 	var cfg Config
 	f, err := os.Open(path)
 	if err == nil {
-		defer f.Close()
+		defer func() { _ = f.Close() }()
 		if err := json.NewDecoder(f).Decode(&cfg); err != nil {
 			return Config{}, err
 		}

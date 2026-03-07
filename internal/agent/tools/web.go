@@ -3,7 +3,7 @@ package tools
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 )
 
@@ -43,8 +43,8 @@ func (t *WebTool) Execute(ctx context.Context, args map[string]interface{}) (str
 	if err != nil {
 		return "", err
 	}
-	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
+	defer func() { _ = resp.Body.Close() }()
+	b, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}

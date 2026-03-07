@@ -25,17 +25,20 @@ func TestStartTelegramWithBase(t *testing.T) {
 			w.Header().Set("Content-Type", "application/json")
 			if first {
 				first = false
-				w.Write([]byte(`{"ok":true,"result":[{"update_id":1,"message":{"message_id":1,"from":{"id":123},"chat":{"id":456,"type":"private"},"text":"hello"}}]}`))
+				_, _ = w.Write([]byte(`{"ok":true,"result":[{"update_id":1,"message":{"message_id":1,"from":{"id":123},"chat":{"id":456,"type":"private"},"text":"hello"}}]}`))
 				return
 			}
-			w.Write([]byte(`{"ok":true,"result":[]}`))
+			_, _ = w.Write([]byte(`{"ok":true,"result":[]}`))
 			return
 		}
 		if strings.HasSuffix(path, "/sendMessage") {
-			r.ParseForm()
+			if err := r.ParseForm(); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 			sent <- r.PostForm
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"ok":true,"result":{}}`))
+			_, _ = w.Write([]byte(`{"ok":true,"result":{}}`))
 			return
 		}
 		w.WriteHeader(404)

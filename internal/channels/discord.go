@@ -42,7 +42,9 @@ func StartDiscord(ctx context.Context, hub *chat.Hub, token string, allowFrom []
 
 	botUser, err := session.User("@me")
 	if err != nil {
-		session.Close()
+		if closeErr := session.Close(); closeErr != nil {
+			log.Printf("discord: error closing session: %v", closeErr)
+		}
 		return fmt.Errorf("failed to get bot user: %w", err)
 	}
 	log.Printf("discord: connected as %s (%s)", botUser.Username, botUser.ID)
@@ -54,7 +56,9 @@ func StartDiscord(ctx context.Context, hub *chat.Hub, token string, allowFrom []
 		<-ctx.Done()
 		log.Println("discord: shutting down")
 		client.stopAllTyping()
-		session.Close()
+		if err := session.Close(); err != nil {
+			log.Printf("discord: error closing session: %v", err)
+		}
 	}()
 
 	return nil
@@ -191,7 +195,9 @@ func (c *discordClient) startTyping(channelID string) {
 	c.typingMu.Unlock()
 
 	go func() {
-		c.sender.ChannelTyping(channelID)
+		if err := c.sender.ChannelTyping(channelID); err != nil {
+			log.Printf("discord: typing error: %v", err)
+		}
 
 		ticker := time.NewTicker(8 * time.Second)
 		defer ticker.Stop()
@@ -207,7 +213,9 @@ func (c *discordClient) startTyping(channelID string) {
 			case <-c.ctx.Done():
 				return
 			case <-ticker.C:
-				c.sender.ChannelTyping(channelID)
+				if err := c.sender.ChannelTyping(channelID); err != nil {
+					log.Printf("discord: typing error: %v", err)
+				}
 			}
 		}
 	}()

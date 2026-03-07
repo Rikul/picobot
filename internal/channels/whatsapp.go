@@ -14,7 +14,7 @@ import (
 
 	qrterminal "github.com/mdp/qrterminal/v3"
 	"go.mau.fi/whatsmeow"
-	waProto "go.mau.fi/whatsmeow/binary/proto"
+	waE2E "go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/store/sqlstore"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
@@ -39,7 +39,7 @@ type realWhatsAppSender struct {
 }
 
 func (r *realWhatsAppSender) SendText(ctx context.Context, to types.JID, text string) error {
-	_, err := r.c.SendMessage(ctx, to, &waProto.Message{Conversation: &text})
+	_, err := r.c.SendMessage(ctx, to, &waE2E.Message{Conversation: &text})
 	return err
 }
 
@@ -254,14 +254,14 @@ func newWhatsAppClient(ctx context.Context, sender whatsappSender, hub *chat.Hub
 
 // handleEvent processes WhatsApp events.
 func (c *whatsappClient) handleEvent(evt interface{}) {
-	switch evt.(type) {
+	switch evt := evt.(type) {
 	case *events.PushNameSetting:
 		// PushName is now available — safe to advertise online presence.
 		if err := c.sender.SendPresence(c.ctx, types.PresenceAvailable); err != nil {
 			log.Printf("whatsapp: failed to send available presence: %v", err)
 		}
 	case *events.Message:
-		c.handleMessage(evt.(*events.Message))
+		c.handleMessage(evt)
 	}
 }
 
@@ -338,7 +338,7 @@ func (c *whatsappClient) handleMessage(msg *events.Message) {
 
 // extractMessageText returns the plain-text content from a WhatsApp proto message.
 // Returns an empty string for unsupported or empty message types.
-func extractMessageText(m *waProto.Message) string {
+func extractMessageText(m *waE2E.Message) string {
 	if m == nil {
 		return ""
 	}

@@ -66,7 +66,7 @@ func (cb *ContextBuilder) BuildMessages(history []string, currentMessage string,
 		var sb strings.Builder
 		sb.WriteString("Available Skills:\n")
 		for _, skill := range loadedSkills {
-			sb.WriteString(fmt.Sprintf("\n## %s\n%s\n\n%s\n", skill.Name, skill.Description, skill.Content))
+			fmt.Fprintf(&sb, "\n## %s\n%s\n\n%s\n", skill.Name, skill.Description, skill.Content)
 		}
 		msgs = append(msgs, providers.Message{Role: "system", Content: sb.String()})
 	}
@@ -85,7 +85,7 @@ func (cb *ContextBuilder) BuildMessages(history []string, currentMessage string,
 		var sb strings.Builder
 		sb.WriteString("Relevant memories:\n")
 		for _, m := range selected {
-			sb.WriteString(fmt.Sprintf("- %s (%s)\n", m.Text, m.Kind))
+			fmt.Fprintf(&sb, "- %s (%s)\n", m.Text, m.Kind)
 		}
 		msgs = append(msgs, providers.Message{Role: "system", Content: sb.String()})
 	}

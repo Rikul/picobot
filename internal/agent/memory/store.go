@@ -165,7 +165,7 @@ func (s *MemoryStore) AppendToday(text string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	_, err = fmt.Fprintf(f, "[%s] %s\n", time.Now().UTC().Format(time.RFC3339), text)
 	return err
 }

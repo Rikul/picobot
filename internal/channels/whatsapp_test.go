@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	waProto "go.mau.fi/whatsmeow/binary/proto"
+	waE2E "go.mau.fi/whatsmeow/proto/waE2E"
 	"go.mau.fi/whatsmeow/types"
 	"go.mau.fi/whatsmeow/types/events"
 
@@ -86,7 +86,7 @@ func makeWhatsAppMsg(senderUser string, isFromMe, isGroup bool, text string) *ev
 			ID:        "testmsg001",
 			Timestamp: time.Now(),
 		},
-		Message: &waProto.Message{Conversation: &text},
+		Message: &waE2E.Message{Conversation: &text},
 	}
 }
 
@@ -246,7 +246,7 @@ func TestWhatsAppClient_HandleMessage_SkipsEmpty(t *testing.T) {
 
 	empty := ""
 	evt := makeWhatsAppMsg("15551234567", false, false, "")
-	evt.Message = &waProto.Message{Conversation: &empty}
+	evt.Message = &waE2E.Message{Conversation: &empty}
 	c.handleMessage(evt)
 
 	select {
@@ -327,10 +327,7 @@ func TestWhatsAppClient_Outbound(t *testing.T) {
 	}
 
 	deadline := time.After(2 * time.Second)
-	for {
-		if mock.sentCount() >= 1 {
-			break
-		}
+	for mock.sentCount() < 1 {
 		select {
 		case <-deadline:
 			t.Fatalf("timeout: expected 1 sent text, got %d", mock.sentCount())
@@ -381,10 +378,7 @@ func TestWhatsAppClient_Outbound_LongMessageSplit(t *testing.T) {
 	hub.Out <- chat.Outbound{Channel: "whatsapp", ChatID: "15551234567@s.whatsapp.net", Content: longText}
 
 	deadline := time.After(2 * time.Second)
-	for {
-		if mock.sentCount() >= 2 {
-			break
-		}
+	for mock.sentCount() < 2 {
 		select {
 		case <-deadline:
 			t.Fatalf("timeout: expected ≥2 chunks for 5000-char message, got %d", mock.sentCount())
@@ -403,17 +397,17 @@ func TestExtractMessageText(t *testing.T) {
 
 	tests := []struct {
 		name     string
-		msg      *waProto.Message
+		msg      *waE2E.Message
 		contains string
 		empty    bool
 	}{
 		{"nil message", nil, "", true},
-		{"conversation", &waProto.Message{Conversation: &hello}, "Hello", false},
-		{"extended text", &waProto.Message{ExtendedTextMessage: &waProto.ExtendedTextMessage{Text: &hello}}, "Hello", false},
-		{"image no caption", &waProto.Message{ImageMessage: &waProto.ImageMessage{}}, "[Image received", false},
-		{"image with caption", &waProto.Message{ImageMessage: &waProto.ImageMessage{Caption: &caption}}, caption, false},
-		{"document with filename", &waProto.Message{DocumentMessage: &waProto.DocumentMessage{FileName: &docName}}, "report.pdf", false},
-		{"empty proto", &waProto.Message{}, "", true},
+		{"conversation", &waE2E.Message{Conversation: &hello}, "Hello", false},
+		{"extended text", &waE2E.Message{ExtendedTextMessage: &waE2E.ExtendedTextMessage{Text: &hello}}, "Hello", false},
+		{"image no caption", &waE2E.Message{ImageMessage: &waE2E.ImageMessage{}}, "[Image received", false},
+		{"image with caption", &waE2E.Message{ImageMessage: &waE2E.ImageMessage{Caption: &caption}}, caption, false},
+		{"document with filename", &waE2E.Message{DocumentMessage: &waE2E.DocumentMessage{FileName: &docName}}, "report.pdf", false},
+		{"empty proto", &waE2E.Message{}, "", true},
 	}
 
 	for _, tt := range tests {

@@ -144,10 +144,10 @@ func NewRootCmd() *cobra.Command {
 
 			resp, err := ag.ProcessDirect(msg, 60*time.Second)
 			if err != nil {
-				fmt.Fprintln(cmd.ErrOrStderr(), "error:", err)
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "error:", err)
 				return
 			}
-			fmt.Fprintln(cmd.OutOrStdout(), resp)
+			_, _ = fmt.Fprintln(cmd.OutOrStdout(), resp)
 		},
 	}
 	agentCmd.Flags().StringP("message", "m", "", "Message to send to the agent")
@@ -276,12 +276,12 @@ func NewRootCmd() *cobra.Command {
 			switch target {
 			case "today":
 				out, _ := mem.ReadToday()
-				fmt.Fprintln(cmd.OutOrStdout(), out)
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), out)
 			case "long":
 				out, _ := mem.ReadLongTerm()
-				fmt.Fprintln(cmd.OutOrStdout(), out)
+				_, _ = fmt.Fprintln(cmd.OutOrStdout(), out)
 			default:
-				fmt.Fprintln(cmd.ErrOrStderr(), "unknown target: "+target)
+				_, _ = fmt.Fprintln(cmd.ErrOrStderr(), "unknown target: "+target)
 			}
 		},
 	}
@@ -445,7 +445,7 @@ func NewRootCmd() *cobra.Command {
 			ranker := memory.NewLLMRankerWithLogger(provider, provider.GetDefaultModel(), logger)
 			res := ranker.Rank(q, items, top)
 			for i, m := range res {
-				fmt.Fprintf(cmd.OutOrStdout(), "%d: %s (%s)\n", i+1, m.Text, m.Kind)
+				_, _ = fmt.Fprintf(cmd.OutOrStdout(), "%d: %s (%s)\n", i+1, m.Text, m.Kind)
 			}
 		},
 	}

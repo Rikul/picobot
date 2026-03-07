@@ -2,8 +2,6 @@ package channels
 
 import (
 	"context"
-	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -87,21 +85,6 @@ func TestTruncate(t *testing.T) {
 	}
 }
 
-// mockDiscordServer creates a mock Discord API server for testing
-func mockDiscordServer() *httptest.Server {
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Return mock responses for Discord API endpoints
-		if strings.HasPrefix(r.URL.Path, "/api/v") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusOK)
-			// Return minimal valid response
-			w.Write([]byte(`{}`))
-			return
-		}
-		w.WriteHeader(http.StatusNotFound)
-	}))
-}
-
 // TestStartDiscord_EmptyToken tests that StartDiscord returns an error with empty token.
 func TestStartDiscord_EmptyToken(t *testing.T) {
 	hub := chat.NewHub(100)
@@ -167,8 +150,8 @@ func TestDiscordClient_MessageHandling(t *testing.T) {
 	botID := "123456789"
 
 	// Clean the content
-	cleaned := strings.Replace(content, "<@"+botID+">", "", -1)
-	cleaned = strings.Replace(cleaned, "<@!"+botID+">", "", -1)
+	cleaned := strings.ReplaceAll(content, "<@"+botID+">", "")
+	cleaned = strings.ReplaceAll(cleaned, "<@!"+botID+">", "")
 	cleaned = strings.TrimSpace(cleaned)
 
 	expected := "Hello, bot!"
@@ -268,10 +251,10 @@ func TestDiscordClient_SenderName(t *testing.T) {
 // TestDiscordClient_ContextCancellation tests that the client respects context cancellation.
 func TestDiscordClient_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	// Cancel immediately
 	cancel()
-	
+
 	// Verify context is cancelled
 	select {
 	case <-ctx.Done():
@@ -286,19 +269,19 @@ func TestDiscordClient_MessageSplit(t *testing.T) {
 	// Create a message that's exactly at the limit
 	longMessage := strings.Repeat("a", 2000)
 	chunks := splitMessage(longMessage, 2000)
-	
+
 	if len(chunks) != 1 {
 		t.Errorf("expected 1 chunk, got %d", len(chunks))
 	}
-	
+
 	// Create a message that's over the limit
 	veryLongMessage := strings.Repeat("a", 3000)
 	chunks = splitMessage(veryLongMessage, 2000)
-	
+
 	if len(chunks) != 2 {
 		t.Errorf("expected 2 chunks, got %d", len(chunks))
 	}
-	
+
 	// Verify total content is preserved
 	totalLen := 0
 	for _, chunk := range chunks {
@@ -314,16 +297,16 @@ func TestDiscordClient_NewlineSplit(t *testing.T) {
 	// Create a message with a newline near the split point
 	message := strings.Repeat("a", 1500) + "\n" + strings.Repeat("b", 1500)
 	chunks := splitMessage(message, 2000)
-	
+
 	if len(chunks) != 2 {
 		t.Errorf("expected 2 chunks, got %d", len(chunks))
 	}
-	
+
 	// First chunk should end with newline (split at newline)
 	if !strings.HasSuffix(chunks[0], "\n") {
 		t.Error("first chunk should end with newline")
 	}
-	
+
 	// Second chunk should start with 'b'
 	if !strings.HasPrefix(chunks[1], "b") {
 		t.Error("second chunk should start with 'b'")

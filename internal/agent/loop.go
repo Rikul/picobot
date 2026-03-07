@@ -150,7 +150,9 @@ func (a *AgentLoop) Run(ctx context.Context) {
 					sess := a.sessions.GetOrCreate(msg.Channel + ":" + msg.ChatID)
 					sess.AddMessage("user", msg.Content)
 					sess.AddMessage("assistant", "OK, I've remembered that.")
-					a.sessions.Save(sess)
+					if err := a.sessions.Save(sess); err != nil {
+						log.Printf("error saving session: %v", err)
+					}
 				}
 				continue
 			}
@@ -238,7 +240,9 @@ func (a *AgentLoop) Run(ctx context.Context) {
 			if !isSystemChannel(msg.Channel) {
 				sess.AddMessage("user", msg.Content)
 				sess.AddMessage("assistant", finalContent)
-				a.sessions.Save(sess)
+				if err := a.sessions.Save(sess); err != nil {
+					log.Printf("error saving session: %v", err)
+				}
 			}
 
 			out := chat.Outbound{Channel: msg.Channel, ChatID: msg.ChatID, Content: finalContent}

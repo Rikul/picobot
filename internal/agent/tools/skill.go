@@ -107,14 +107,9 @@ func (sm *SkillManager) parseSkillMetadata(skillPath string) (SkillMetadata, err
 	}
 
 	meta := SkillMetadata{}
-	inFrontmatter := true
 	for i := 1; i < len(lines); i++ {
 		line := lines[i]
 		if line == "---" {
-			inFrontmatter = false
-			break
-		}
-		if !inFrontmatter {
 			break
 		}
 		parts := strings.SplitN(line, ":", 2)
