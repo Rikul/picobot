@@ -266,6 +266,9 @@ func transcribeViaCLI(ctx context.Context, audioData []byte, filename string, cf
 
 	// Build command. Support "python3 -m whisper" style multi-word commands.
 	parts := strings.Fields(cfg.Command)
+	if len(parts) == 0 {
+		return "", fmt.Errorf("transcription command is empty")
+	}
 	args := append(parts[1:], tmpAudio.Name(),
 		"--model", model,
 		"--output_format", "txt",
