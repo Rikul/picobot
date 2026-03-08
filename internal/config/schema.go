@@ -55,23 +55,11 @@ type ProviderConfig struct {
 	APIBase string `json:"apiBase"`
 }
 
-// TranscriptionConfig configures speech-to-text for Telegram voice messages.
-// Two modes are supported:
-//
-//   - CLI mode (recommended, no API key needed): set Command to the whisper
-//     executable (e.g. "whisper" after `pip install openai-whisper`).
-//     Model is the whisper model size: "tiny", "base", "small", "medium", "large".
-//
-//   - HTTP mode: set APIBase to a Whisper-compatible REST endpoint.
-//     APIKey and Model ("whisper-1") are passed to that endpoint.
-//
-// CLI mode takes priority when Command is non-empty.
+// TranscriptionConfig configures speech-to-text for Telegram voice messages
+// using a local whisper CLI (e.g. `pip install openai-whisper`).
+// Set Command to the executable name and Model to the whisper model size
+// ("tiny", "base", "small", "medium", "large"). Model defaults to "tiny".
 type TranscriptionConfig struct {
-	// CLI mode
 	Command string `json:"command,omitempty"` // e.g. "whisper" or "python3 -m whisper"
-	Model   string `json:"model,omitempty"`   // whisper model size, default "tiny" for CLI
-
-	// HTTP mode
-	APIBase string `json:"apiBase,omitempty"`
-	APIKey  string `json:"apiKey,omitempty"`
+	Model   string `json:"model,omitempty"`   // default "tiny"
 }

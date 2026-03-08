@@ -1,13 +1,11 @@
 package channels
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -194,10 +192,9 @@ func StartTelegramWithBase(ctx context.Context, hub *chat.Hub, token, base strin
 	return nil
 }
 
-// transcribeVoice downloads a Telegram voice/audio file and transcribes it.
-// CLI mode is used when cfg.Command is set; otherwise HTTP mode is used.
+// transcribeVoice downloads a Telegram voice/audio file and transcribes it via the whisper CLI.
 func transcribeVoice(ctx context.Context, client *http.Client, telegramBase, fileBase, fileID string, cfg *config.TranscriptionConfig) (string, error) {
-	// Step 1: resolve the Telegram file path.
+	// Resolve the Telegram file path.
 	resp, err := client.PostForm(telegramBase+"/getFile", url.Values{"file_id": {fileID}})
 	if err != nil {
 		return "", fmt.Errorf("getFile request: %w", err)
@@ -215,9 +212,8 @@ func transcribeVoice(ctx context.Context, client *http.Client, telegramBase, fil
 		return "", fmt.Errorf("getFile invalid response: %s", body)
 	}
 
-	// Step 2: download the audio file.
-	fileURL := fileBase + "/" + gf.Result.FilePath
-	dlReq, err := http.NewRequestWithContext(ctx, http.MethodGet, fileURL, nil)
+	// Download the audio file.
+	dlReq, err := http.NewRequestWithContext(ctx, http.MethodGet, fileBase+"/"+gf.Result.FilePath, nil)
 	if err != nil {
 		return "", fmt.Errorf("build download request: %w", err)
 	}
@@ -234,11 +230,7 @@ func transcribeVoice(ctx context.Context, client *http.Client, telegramBase, fil
 		filename = parts[len(parts)-1]
 	}
 
-	// Step 3: transcribe.
-	if cfg.Command != "" {
-		return transcribeViaCLI(ctx, audioData, filename, cfg)
-	}
-	return transcribeViaHTTP(ctx, audioData, filename, cfg)
+	return transcribeViaCLI(ctx, audioData, filename, cfg)
 }
 
 // transcribeViaCLI writes the audio to a temp file, invokes the whisper CLI,
@@ -294,54 +286,3 @@ func transcribeViaCLI(ctx context.Context, audioData []byte, filename string, cf
 	return strings.TrimSpace(string(txt)), nil
 }
 
-// transcribeViaHTTP sends the audio to a Whisper-compatible REST endpoint
-// (e.g. OpenAI /v1/audio/transcriptions or a self-hosted server).
-func transcribeViaHTTP(ctx context.Context, audioData []byte, filename string, cfg *config.TranscriptionConfig) (string, error) {
-	var buf bytes.Buffer
-	mw := multipart.NewWriter(&buf)
-
-	model := cfg.Model
-	if model == "" {
-		model = "whisper-1"
-	}
-	if err := mw.WriteField("model", model); err != nil {
-		return "", fmt.Errorf("write model field: %w", err)
-	}
-	fw, err := mw.CreateFormFile("file", filename)
-	if err != nil {
-		return "", fmt.Errorf("create form file: %w", err)
-	}
-	if _, err := fw.Write(audioData); err != nil {
-		return "", fmt.Errorf("write audio data: %w", err)
-	}
-	mw.Close()
-
-	apiBase := strings.TrimRight(cfg.APIBase, "/")
-	tReq, err := http.NewRequestWithContext(ctx, http.MethodPost, apiBase+"/audio/transcriptions", &buf)
-	if err != nil {
-		return "", fmt.Errorf("build transcription request: %w", err)
-	}
-	tReq.Header.Set("Content-Type", mw.FormDataContentType())
-	if cfg.APIKey != "" {
-		tReq.Header.Set("Authorization", "Bearer "+cfg.APIKey)
-	}
-
-	tClient := &http.Client{Timeout: 60 * time.Second}
-	tResp, err := tClient.Do(tReq)
-	if err != nil {
-		return "", fmt.Errorf("transcription request: %w", err)
-	}
-	tBody, _ := io.ReadAll(tResp.Body)
-	tResp.Body.Close()
-
-	var tr struct {
-		Text string `json:"text"`
-	}
-	if err := json.Unmarshal(tBody, &tr); err != nil {
-		return "", fmt.Errorf("transcription parse error (%s): %w", tBody, err)
-	}
-	if tr.Text == "" {
-		return "", fmt.Errorf("transcription returned empty text: %s", tBody)
-	}
-	return tr.Text, nil
-}
