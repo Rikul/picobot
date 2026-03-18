@@ -20,7 +20,10 @@ func newTestMCPServer(t *testing.T) (*httptest.Server, *mcp.Client) {
 			Method  string          `json:"method"`
 			Params  json.RawMessage `json:"params,omitempty"`
 		}
-		json.NewDecoder(r.Body).Decode(&req)
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 
 		type rpcResp struct {
@@ -31,11 +34,11 @@ func newTestMCPServer(t *testing.T) (*httptest.Server, *mcp.Client) {
 
 		switch req.Method {
 		case "initialize":
-			json.NewEncoder(w).Encode(rpcResp{JSONRPC: "2.0", ID: req.ID, Result: json.RawMessage(`{"capabilities":{}}`)})
+			_ = json.NewEncoder(w).Encode(rpcResp{JSONRPC: "2.0", ID: req.ID, Result: json.RawMessage(`{"capabilities":{}}`)})
 		case "notifications/initialized":
 			w.WriteHeader(http.StatusAccepted)
 		case "tools/list":
-			json.NewEncoder(w).Encode(rpcResp{
+			_ = json.NewEncoder(w).Encode(rpcResp{
 				JSONRPC: "2.0", ID: req.ID,
 				Result: json.RawMessage(`{"tools":[{"name":"upper","description":"uppercases text","inputSchema":{"type":"object","properties":{"text":{"type":"string"}},"required":["text"]}}]}`),
 			})
@@ -46,7 +49,7 @@ func newTestMCPServer(t *testing.T) (*httptest.Server, *mcp.Client) {
 			}
 			_ = json.Unmarshal(req.Params, &params)
 			text := strings.ToUpper(params.Arguments["text"].(string))
-			json.NewEncoder(w).Encode(rpcResp{
+			_ = json.NewEncoder(w).Encode(rpcResp{
 				JSONRPC: "2.0", ID: req.ID,
 				Result: json.RawMessage(`{"content":[{"type":"text","text":"` + text + `"}]}`),
 			})
@@ -64,7 +67,7 @@ func newTestMCPServer(t *testing.T) (*httptest.Server, *mcp.Client) {
 func TestMCPToolNameAndDescription(t *testing.T) {
 	srv, client := newTestMCPServer(t)
 	defer srv.Close()
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	tools := client.Tools()
 	if len(tools) != 1 {
@@ -88,7 +91,7 @@ func TestMCPToolNameAndDescription(t *testing.T) {
 func TestMCPToolExecute(t *testing.T) {
 	srv, client := newTestMCPServer(t)
 	defer srv.Close()
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	tools := client.Tools()
 	mcpTool := NewMCPTool(client, "testsvr", tools[0])
@@ -105,7 +108,7 @@ func TestMCPToolExecute(t *testing.T) {
 func TestMCPToolRegistration(t *testing.T) {
 	srv, client := newTestMCPServer(t)
 	defer srv.Close()
-	defer client.Close()
+	defer func() { _ = client.Close() }()
 
 	reg := NewRegistry()
 	for _, tool := range client.Tools() {
