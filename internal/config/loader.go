@@ -46,4 +46,9 @@ func applyEnvOverrides(cfg *Config) {
 		b := v != "false" && v != "0" && v != "False" && v != "FALSE"
 		cfg.Agents.Defaults.EnableToolActivityIndicator = &b
 	}
+	if v := os.Getenv("PICOBOT_AGENT_TIMEOUT_S"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.Agents.Defaults.AgentTimeoutS = n
+		}
+	}
 }

@@ -98,6 +98,12 @@ if [ -n "${PICOBOT_MAX_TOOL_ITERATIONS}" ]; then
   jq --argjson iter "${PICOBOT_MAX_TOOL_ITERATIONS}" '.agents.defaults.maxToolIterations = $iter' "${CONFIG}" > "$TMP" && mv "$TMP" "${CONFIG}"
 fi
 
+if [ -n "${PICOBOT_AGENT_TIMEOUT_S}" ]; then
+  echo "Applying PICOBOT_AGENT_TIMEOUT_S from environment..."
+  TMP=$(mktemp)
+  jq --argjson timeout "${PICOBOT_AGENT_TIMEOUT_S}" '.agents.defaults.agentTimeoutS = $timeout' "${CONFIG}" > "$TMP" && mv "$TMP" "${CONFIG}"
+fi
+
 if [ -n "${PICOBOT_ENABLE_TOOL_ACTIVITY_INDICATOR}" ]; then
   echo "Applying PICOBOT_ENABLE_TOOL_ACTIVITY_INDICATOR from environment..."
   TMP=$(mktemp)

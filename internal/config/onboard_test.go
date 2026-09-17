@@ -71,8 +71,8 @@ func TestSaveAndLoadConfig(t *testing.T) {
 
 func TestDefaultConfig_AgentTimeoutS(t *testing.T) {
 	cfg := DefaultConfig()
-	if cfg.Agents.Defaults.AgentTimeoutS != 300 {
-		t.Errorf("AgentTimeoutS = %d, want 300", cfg.Agents.Defaults.AgentTimeoutS)
+	if cfg.Agents.Defaults.AgentTimeoutS != DefaultAgentTimeoutS {
+		t.Errorf("AgentTimeoutS = %d, want %d", cfg.Agents.Defaults.AgentTimeoutS, DefaultAgentTimeoutS)
 	}
 }
 
@@ -91,8 +91,8 @@ func TestDefaultConfig_AgentTimeoutS_RoundTrips(t *testing.T) {
 	if err := json.Unmarshal(b, &parsed); err != nil {
 		t.Fatalf("invalid json: %v", err)
 	}
-	if parsed.Agents.Defaults.AgentTimeoutS != 300 {
-		t.Errorf("AgentTimeoutS after round-trip = %d, want 300", parsed.Agents.Defaults.AgentTimeoutS)
+	if parsed.Agents.Defaults.AgentTimeoutS != DefaultAgentTimeoutS {
+		t.Errorf("AgentTimeoutS after round-trip = %d, want %d", parsed.Agents.Defaults.AgentTimeoutS, DefaultAgentTimeoutS)
 	}
 }
 

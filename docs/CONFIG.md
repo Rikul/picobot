@@ -15,6 +15,7 @@ Picobot is configured via `~/.picobot/config.json`. Run `picobot onboard` to gen
       "maxToolIterations": 100,
       "heartbeatIntervalS": 60,
       "requestTimeoutS": 60,
+      "agentTimeoutS": 300,
       "enableToolActivityIndicator": true
     }
   },
@@ -67,6 +68,7 @@ Agent behavior settings.
 | `maxToolIterations` | int | `100` | Maximum number of tool-calling iterations per request. Prevents infinite loops. |
 | `heartbeatIntervalS` | int | `60` | How often (in seconds) the heartbeat checks `HEARTBEAT.md` for periodic tasks. Only used in gateway mode. |
 | `requestTimeoutS` | int | `60` | HTTP timeout in seconds for each LLM API request. Increase for slow models or poor network conditions. |
+| `agentTimeoutS` | int | `300` | Wall-clock timeout in seconds for a single agent turn (`picobot agent` and gateway channel messages, including Telegram, Discord, Slack, WhatsApp, heartbeat, and cron). `0` or omitted falls back to 300. Distinct from `requestTimeoutS`, which is the per-HTTP LLM timeout. |
 | `enableToolActivityIndicator` | bool | `true` | When `true`, sends interim `🤖 Running` / `📢 done` messages to the chat channel as tools are called. Set to `false` for IoT or headless deployments where only the final response should be delivered. |
 
 ### Model Priority
@@ -89,6 +91,7 @@ The model is resolved in this order:
       "maxToolIterations": 200,
       "heartbeatIntervalS": 120,
       "requestTimeoutS": 120,
+      "agentTimeoutS": 300,
       "enableToolActivityIndicator": false
     }
   }
@@ -399,6 +402,7 @@ When running with Docker, you can override config values using environment varia
 | `PICOBOT_MODEL` | `agents.defaults.model` | LLM model to use |
 | `PICOBOT_MAX_TOKENS` | `agents.defaults.maxTokens` | Maximum tokens for LLM responses |
 | `PICOBOT_MAX_TOOL_ITERATIONS` | `agents.defaults.maxToolIterations` | Maximum tool iterations per request |
+| `PICOBOT_AGENT_TIMEOUT_S` | `agents.defaults.agentTimeoutS` | Wall-clock timeout in seconds for a single agent turn |
 | `TELEGRAM_BOT_TOKEN` | `channels.telegram.token` | Telegram bot token (also enables the channel) |
 | `TELEGRAM_ALLOW_FROM` | `channels.telegram.allowFrom` | Comma-separated allowed Telegram user IDs |
 | `DISCORD_BOT_TOKEN` | `channels.discord.token` | Discord bot token (also enables the channel) |
