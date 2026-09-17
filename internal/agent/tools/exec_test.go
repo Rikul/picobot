@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -63,5 +64,37 @@ func TestExecTimeout(t *testing.T) {
 	_, err := e.Execute(context.Background(), map[string]interface{}{"cmd": []interface{}{"sleep", "2"}})
 	if err == nil {
 		t.Fatalf("expected timeout error")
+	}
+}
+
+func TestExecExtraDeny(t *testing.T) {
+	e := NewExecTool(2)
+	e.SetDeny([]string{"curl", " /usr/bin/Python "})
+
+	_, err := e.Execute(context.Background(), map[string]interface{}{"cmd": []interface{}{"curl", "example.com"}})
+	if err == nil || !strings.Contains(err.Error(), "disallowed") {
+		t.Fatalf("expected curl to be disallowed, got %v", err)
+	}
+
+	_, err = e.Execute(context.Background(), map[string]interface{}{"cmd": []interface{}{"python", "-c", "print(1)"}})
+	if err == nil || !strings.Contains(err.Error(), "disallowed") {
+		t.Fatalf("expected python to be disallowed via base-name match, got %v", err)
+	}
+}
+
+func TestExecEmptyDenyStillBlocksBuiltIn(t *testing.T) {
+	e := NewExecTool(2)
+	e.SetDeny(nil)
+	_, err := e.Execute(context.Background(), map[string]interface{}{"cmd": []interface{}{"sudo", "ls"}})
+	if err == nil || !strings.Contains(err.Error(), "disallowed") {
+		t.Fatalf("expected sudo to stay blocked with empty deny, got %v", err)
+	}
+
+	out, err := e.Execute(context.Background(), map[string]interface{}{"cmd": []interface{}{"echo", "ok"}})
+	if err != nil {
+		t.Fatalf("echo should still run with empty deny: %v", err)
+	}
+	if out != "ok" {
+		t.Fatalf("unexpected out: %s", out)
 	}
 }

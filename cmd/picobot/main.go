@@ -157,6 +157,7 @@ func NewRootCmd() *cobra.Command {
 			if cfg.Agents.Defaults.EnableToolActivityIndicator != nil && !*cfg.Agents.Defaults.EnableToolActivityIndicator {
 				ag.SetToolActivityIndicator(false)
 			}
+			ag.SetCommandDeny(cfg.Agents.Defaults.Commands.Deny)
 
 			agentTimeout := config.AgentTimeout(cfg.Agents.Defaults.AgentTimeoutS)
 			resp, err := ag.ProcessDirect(msg, agentTimeout)
@@ -210,6 +211,7 @@ func NewRootCmd() *cobra.Command {
 				ag.SetToolActivityIndicator(false)
 			}
 			ag.SetAgentTimeout(config.AgentTimeout(cfg.Agents.Defaults.AgentTimeoutS))
+			ag.SetCommandDeny(cfg.Agents.Defaults.Commands.Deny)
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 

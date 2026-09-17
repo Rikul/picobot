@@ -16,7 +16,10 @@ Picobot is configured via `~/.picobot/config.json`. Run `picobot onboard` to gen
       "heartbeatIntervalS": 60,
       "requestTimeoutS": 60,
       "agentTimeoutS": 300,
-      "enableToolActivityIndicator": true
+      "enableToolActivityIndicator": true,
+      "commands": {
+        "deny": []
+      }
     }
   },
   "mcpServers": {},
@@ -70,6 +73,7 @@ Agent behavior settings.
 | `requestTimeoutS` | int | `60` | HTTP timeout in seconds for each LLM API request. Increase for slow models or poor network conditions. |
 | `agentTimeoutS` | int | `300` | Wall-clock timeout in seconds for a single agent turn (`picobot agent` and gateway channel messages, including Telegram, Discord, Slack, WhatsApp, heartbeat, and cron). `0` or omitted falls back to 300. Distinct from `requestTimeoutS`, which is the per-HTTP LLM timeout. |
 | `enableToolActivityIndicator` | bool | `true` | When `true`, sends interim `🤖 Running` / `📢 done` messages to the chat channel as tools are called. Set to `false` for IoT or headless deployments where only the final response should be delivered. |
+| `commands.deny` | string[] | `[]` | Extra program names the `exec` tool must not run. Merged with the built-in list (`rm`, `sudo`, `dd`, `mkfs`, `shutdown`, `reboot`). Empty means no extra blocks. Matching is case-insensitive on the binary base name. |
 
 ### Model Priority
 
@@ -92,7 +96,10 @@ The model is resolved in this order:
       "heartbeatIntervalS": 120,
       "requestTimeoutS": 120,
       "agentTimeoutS": 300,
-      "enableToolActivityIndicator": false
+      "enableToolActivityIndicator": false,
+      "commands": {
+        "deny": ["curl", "chmod"]
+      }
     }
   }
 }

@@ -23,6 +23,7 @@ func DefaultConfig() Config {
 			RequestTimeoutS:             60,
 			AgentTimeoutS:               DefaultAgentTimeoutS,
 			EnableToolActivityIndicator: boolPtr(true),
+			Commands:                    CommandsConfig{Deny: []string{}},
 		}},
 		Channels: ChannelsConfig{
 			Telegram: TelegramConfig{Enabled: false, Token: "", AllowFrom: []string{}},

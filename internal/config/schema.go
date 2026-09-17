@@ -22,15 +22,21 @@ type AgentsConfig struct {
 }
 
 type AgentDefaults struct {
-	Workspace                   string  `json:"workspace"`
-	Model                       string  `json:"model"`
-	MaxTokens                   int     `json:"maxTokens"`
-	Temperature                 float64 `json:"temperature"`
-	MaxToolIterations           int     `json:"maxToolIterations"`
-	HeartbeatIntervalS          int     `json:"heartbeatIntervalS"`
-	RequestTimeoutS             int     `json:"requestTimeoutS"`
-	AgentTimeoutS               int     `json:"agentTimeoutS"`
-	EnableToolActivityIndicator *bool   `json:"enableToolActivityIndicator,omitempty"`
+	Workspace                   string         `json:"workspace"`
+	Model                       string         `json:"model"`
+	MaxTokens                   int            `json:"maxTokens"`
+	Temperature                 float64        `json:"temperature"`
+	MaxToolIterations           int            `json:"maxToolIterations"`
+	HeartbeatIntervalS          int            `json:"heartbeatIntervalS"`
+	RequestTimeoutS             int            `json:"requestTimeoutS"`
+	AgentTimeoutS               int            `json:"agentTimeoutS"`
+	EnableToolActivityIndicator *bool          `json:"enableToolActivityIndicator,omitempty"`
+	Commands                    CommandsConfig `json:"commands"`
+}
+
+// CommandsConfig holds exec-tool policy. Empty deny keeps the built-in dangerous-program list only
+type CommandsConfig struct {
+	Deny []string `json:"deny"`
 }
 
 type ChannelsConfig struct {

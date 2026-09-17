@@ -21,6 +21,7 @@ import (
 type ExecTool struct {
 	timeout    time.Duration
 	allowedDir string
+	extraDeny  map[string]struct{}
 }
 
 func NewExecTool(timeoutSecs int) *ExecTool {
@@ -63,10 +64,39 @@ var dangerous = map[string]struct{}{
 	"reboot":   {},
 }
 
+func programBase(prog string) string {
+	return strings.ToLower(filepath.Base(strings.TrimSpace(prog)))
+}
+
 func isDangerousProg(prog string) bool {
-	base := filepath.Base(prog)
-	base = strings.ToLower(base)
-	_, ok := dangerous[base]
+	_, ok := dangerous[programBase(prog)]
+	return ok
+}
+
+// SetDeny adds extra program names to block. Built-in dangerous programs
+// (rm, sudo, dd, mkfs, shutdown, reboot) stay blocked regardless.
+// Empty or omitted names are ignored. Matching is case-insensitive on the
+// binary base name (curl and /usr/bin/curl are the same).
+func (t *ExecTool) SetDeny(names []string) {
+	extra := make(map[string]struct{}, len(names))
+	for _, name := range names {
+		base := programBase(name)
+		if base == "" || base == "." {
+			continue
+		}
+		extra[base] = struct{}{}
+	}
+	t.extraDeny = extra
+}
+
+func (t *ExecTool) isDenied(prog string) bool {
+	if isDangerousProg(prog) {
+		return true
+	}
+	if t.extraDeny == nil {
+		return false
+	}
+	_, ok := t.extraDeny[programBase(prog)]
 	return ok
 }
 
@@ -106,7 +136,7 @@ func (t *ExecTool) Execute(ctx context.Context, args map[string]interface{}) (st
 	}
 
 	prog := argv[0]
-	if isDangerousProg(prog) {
+	if t.isDenied(prog) {
 		return "", fmt.Errorf("exec: program '%s' is disallowed", prog)
 	}
 	for _, a := range argv[1:] {

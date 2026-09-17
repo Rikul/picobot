@@ -160,6 +160,14 @@ func (a *AgentLoop) SetAgentTimeout(d time.Duration) {
 	a.timeout = d
 }
 
+// SetCommandDeny applies extra exec denials from config. Built-in dangerous
+// programs remain blocked even when names is empty.
+func (a *AgentLoop) SetCommandDeny(names []string) {
+	if t, ok := a.tools.Get("exec").(*tools.ExecTool); ok && t != nil {
+		t.SetDeny(names)
+	}
+}
+
 // Close shuts down all MCP server connections.
 func (a *AgentLoop) Close() {
 	for _, c := range a.mcpClients {

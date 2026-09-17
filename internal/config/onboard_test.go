@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -93,6 +94,57 @@ func TestDefaultConfig_AgentTimeoutS_RoundTrips(t *testing.T) {
 	}
 	if parsed.Agents.Defaults.AgentTimeoutS != DefaultAgentTimeoutS {
 		t.Errorf("AgentTimeoutS after round-trip = %d, want %d", parsed.Agents.Defaults.AgentTimeoutS, DefaultAgentTimeoutS)
+	}
+}
+
+func TestDefaultConfig_CommandsDenyEmpty(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.Agents.Defaults.Commands.Deny == nil {
+		t.Fatal("commands.deny should be an empty slice, not nil")
+	}
+	if len(cfg.Agents.Defaults.Commands.Deny) != 0 {
+		t.Errorf("commands.deny = %v, want []", cfg.Agents.Defaults.Commands.Deny)
+	}
+}
+
+func TestDefaultConfig_CommandsDeny_RoundTrips(t *testing.T) {
+	d := t.TempDir()
+	cfg := DefaultConfig()
+	path := filepath.Join(d, "config.json")
+	if err := SaveConfig(cfg, path); err != nil {
+		t.Fatalf("SaveConfig failed: %v", err)
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading saved config failed: %v", err)
+	}
+	if !strings.Contains(string(b), `"deny": []`) && !strings.Contains(string(b), `"deny":[]`) {
+		t.Fatalf("expected empty deny array in JSON, got:\n%s", b)
+	}
+	var parsed Config
+	if err := json.Unmarshal(b, &parsed); err != nil {
+		t.Fatalf("invalid json: %v", err)
+	}
+	if parsed.Agents.Defaults.Commands.Deny == nil {
+		t.Fatal("commands.deny should round-trip as empty slice, not nil")
+	}
+	if len(parsed.Agents.Defaults.Commands.Deny) != 0 {
+		t.Errorf("commands.deny after round-trip = %v, want []", parsed.Agents.Defaults.Commands.Deny)
+	}
+
+	cfg.Agents.Defaults.Commands.Deny = []string{"curl", "chmod"}
+	if err := SaveConfig(cfg, path); err != nil {
+		t.Fatalf("SaveConfig with deny failed: %v", err)
+	}
+	b, err = os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading saved config failed: %v", err)
+	}
+	if err := json.Unmarshal(b, &parsed); err != nil {
+		t.Fatalf("invalid json: %v", err)
+	}
+	if len(parsed.Agents.Defaults.Commands.Deny) != 2 || parsed.Agents.Defaults.Commands.Deny[0] != "curl" || parsed.Agents.Defaults.Commands.Deny[1] != "chmod" {
+		t.Errorf("commands.deny after round-trip = %v, want [curl chmod]", parsed.Agents.Defaults.Commands.Deny)
 	}
 }
 
