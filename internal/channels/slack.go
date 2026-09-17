@@ -57,9 +57,8 @@ func StartSlack(ctx context.Context, hub *chat.Hub, appToken, botToken string, a
 	go client.runEvents()
 
 	go func() {
-		if err := socketClient.RunContext(ctx); err != nil {
-			log.Printf("slack: socket mode error: %v", err)
-		}
+		// RunContext only returns on failure
+		log.Printf("slack: socket mode error: %v", socketClient.RunContext(ctx))
 	}()
 
 	go func() {
