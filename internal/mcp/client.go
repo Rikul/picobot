@@ -14,6 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/local/picobot/internal/version"
 )
 
 // Tool describes a tool exposed by an MCP server.
@@ -137,7 +139,7 @@ func (c *Client) initialize() error {
 		"protocolVersion": "2025-03-26",
 		"clientInfo": map[string]interface{}{
 			"name":    "picobot",
-			"version": "0.1.10",
+			"version": version.Version,
 		},
 		"capabilities": map[string]interface{}{},
 	}

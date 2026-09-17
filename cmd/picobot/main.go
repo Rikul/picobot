@@ -24,9 +24,8 @@ import (
 	"github.com/local/picobot/internal/cron"
 	"github.com/local/picobot/internal/heartbeat"
 	"github.com/local/picobot/internal/providers"
+	"github.com/local/picobot/internal/version"
 )
-
-const version = "0.2.1"
 
 func NewRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
@@ -38,7 +37,7 @@ func NewRootCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print version",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("🤖 picobot v%s\n", version)
+			fmt.Printf("🤖 picobot v%s\n", version.Version)
 		},
 	})
 

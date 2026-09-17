@@ -106,13 +106,13 @@ golangci-lint run --fix
 
 ## Versioning
 
-The version string is defined in `cmd/picobot/main.go`:
+The version string is defined in `internal/version/version.go`:
 
 ```go
-const version = "x.x.x"
+const Version = "x.x.x"
 ```
 
-Update this value before building a new release.
+Update this value before building a new release. The CLI (`picobot version`) and the MCP client both read it from this package.
 
 ## Building for Different Platforms
 
